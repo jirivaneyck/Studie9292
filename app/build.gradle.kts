@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -11,8 +13,8 @@ android {
         applicationId = "nl.jvaneyck.citywalk"
         minSdk = 26
         targetSdk = 35
-        versionCode = 5
-        versionName = "1.4"
+        versionCode = 6
+        versionName = "1.5"
 
         // Web page that turns a shared link into "open City Walk" (hosted with the lingo site)
         // DuckDNS name for the home server (WhatsApp only links a bare IP partially)
@@ -21,6 +23,16 @@ android {
         manifestPlaceholders["linkHost"] = linkHost
         manifestPlaceholders["linkPath"] = linkPath
         buildConfigField("String", "LINK_BASE", "\"https://$linkHost$linkPath\"")
+
+        // City Walk API on the same server (server/api). The upload token lives in
+        // local.properties as citywalk.token=... so it never ends up in git.
+        buildConfigField("String", "API_BASE", "\"https://$linkHost/citywalk\"")
+        val localProps = Properties().apply {
+            rootProject.file("local.properties").takeIf { it.exists() }?.reader()?.use { load(it) }
+        }
+        val apiToken = localProps.getProperty("citywalk.token", "")
+        if (apiToken.isEmpty()) logger.warn("citywalk.token missing in local.properties: uploads disabled")
+        buildConfigField("String", "API_TOKEN", "\"$apiToken\"")
     }
 
     buildFeatures {
@@ -49,6 +61,7 @@ dependencies {
     implementation("androidx.exifinterface:exifinterface:1.3.7")
     implementation("com.google.android.gms:play-services-location:21.3.0")
     implementation("org.osmdroid:osmdroid-android:6.1.20")
+    implementation("androidx.work:work-runtime:2.10.0")
 }
 
 // After every debug build: copy the APK to the project root and upload it to the home server,

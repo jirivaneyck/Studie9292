@@ -24,6 +24,8 @@ object ShareHelper {
             .appendQueryParameter("lon", String.format(Locale.US, "%.6f", pin.lon))
             .appendQueryParameter("type", if (asGoal) Pin.TYPE_GOAL else Pin.TYPE_PIN)
             .apply { if (pin.note.isNotBlank()) appendQueryParameter("note", pin.note.take(MAX_NOTE)) }
+            // The photo itself goes to the server (PhotoUploadWorker); the link only carries its id
+            .apply { if (CityWalkApi.enabled) pin.photoId?.let { appendQueryParameter("photo", it) } }
             .build()
             .toString()
 
@@ -47,9 +49,11 @@ object ShareHelper {
             lon = lon,
             time = System.currentTimeMillis(),
             note = uri.getQueryParameter("note")?.take(MAX_NOTE).orEmpty(),
-            photo = null,
+            // Downloaded from the server after the pin is added (see MainActivity)
+            photo = uri.getQueryParameter("photo")?.takeIf { CityWalkApi.isValidPhotoId(it) }?.let { "$it.jpg" },
             type = type,
             received = true,
+            photoUploaded = true,
         )
     }
 

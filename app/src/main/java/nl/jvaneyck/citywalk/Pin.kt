@@ -13,8 +13,13 @@ data class Pin(
     val received: Boolean = false,
     /** Only for goals: the user has physically been there. */
     val reached: Boolean = false,
+    /** The photo is on the server (uploaded by us, or it came from there with a shared link). */
+    val photoUploaded: Boolean = false,
 ) {
     val isGoal get() = type == TYPE_GOAL
+
+    /** Id of the photo on the server: its file name without ".jpg". */
+    val photoId: String? get() = photo?.removeSuffix(".jpg")
 
     companion object {
         const val TYPE_PIN = "pin"

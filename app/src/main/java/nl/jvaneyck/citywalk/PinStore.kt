@@ -6,8 +6,8 @@ import org.json.JSONObject
 import java.io.File
 
 /**
- * Single in-memory copy of the pins, shared by the activity and the tracking service
- * (both only touch it on the main thread), persisted to pins.json on every change.
+ * Single in-memory copy of the pins, shared by the activity, the tracking service and the
+ * photo upload worker (background thread, hence the locking), persisted on every change.
  */
 object PinStore {
     private var cache: MutableList<Pin>? = null
@@ -18,15 +18,20 @@ object PinStore {
 
     fun photoFile(ctx: Context, pin: Pin): File? = pin.photo?.let { File(photoDir(ctx), it) }
 
-    fun all(ctx: Context): List<Pin> = pins(ctx)
+    /** Snapshot; safe to iterate while others change the store. */
+    @Synchronized
+    fun all(ctx: Context): List<Pin> = pins(ctx).toList()
 
+    @Synchronized
     fun get(ctx: Context, id: String): Pin? = pins(ctx).find { it.id == id }
 
+    @Synchronized
     fun add(ctx: Context, pin: Pin) {
         pins(ctx) += pin
         save(ctx)
     }
 
+    @Synchronized
     fun update(ctx: Context, pin: Pin) {
         val list = pins(ctx)
         val i = list.indexOfFirst { it.id == pin.id }
@@ -36,6 +41,14 @@ object PinStore {
         }
     }
 
+    /** Applies [change] to the current version of the pin (no lost updates across threads). */
+    @Synchronized
+    fun modify(ctx: Context, id: String, change: (Pin) -> Pin): Pin? {
+        val current = get(ctx, id) ?: return null
+        return change(current).also { update(ctx, it) }
+    }
+
+    @Synchronized
     fun remove(ctx: Context, id: String) {
         val list = pins(ctx)
         list.find { it.id == id }?.let { photoFile(ctx, it)?.delete() }
@@ -61,6 +74,7 @@ object PinStore {
                 type = o.optString("type", Pin.TYPE_PIN),
                 received = o.optBoolean("received"),
                 reached = o.optBoolean("reached"),
+                photoUploaded = o.optBoolean("photoUploaded"),
             )
         }
     }
@@ -79,6 +93,7 @@ object PinStore {
                     .put("type", p.type)
                     .put("received", p.received)
                     .put("reached", p.reached)
+                    .put("photoUploaded", p.photoUploaded)
             )
         }
         val tmp = File(ctx.filesDir, "pins.json.tmp")

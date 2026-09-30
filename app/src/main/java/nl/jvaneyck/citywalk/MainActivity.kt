@@ -3,9 +3,6 @@ package nl.jvaneyck.citywalk
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Matrix
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Build
@@ -31,7 +28,6 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.exifinterface.media.ExifInterface
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
@@ -155,6 +151,10 @@ class MainActivity : AppCompatActivity() {
 
         requestPermissions()
         if (savedInstanceState == null) handleIntent(intent)
+
+        // Catch up on photos that couldn't be uploaded / downloaded earlier
+        PhotoUploadWorker.enqueue(this)
+        PinStore.all(this).filter { it.received }.forEach { downloadPhotoIfMissing(it) }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -199,6 +199,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menu.add(0, MENU_CENTER, 0, R.string.center_on_me)
+        if (CityWalkApi.enabled) menu.add(0, MENU_SAVE_TRIP, 1, R.string.save_trip)
         menu.add(0, MENU_CLEAR, 1, R.string.clear_route)
         if (Build.VERSION.SDK_INT >= 31) menu.add(0, MENU_LINKS, 2, R.string.open_links_setting)
         return true
@@ -208,6 +209,10 @@ class MainActivity : AppCompatActivity() {
         MENU_CENTER -> {
             myLocation.myLocation?.let { map.controller.animateTo(it) }
             myLocation.enableFollowLocation()
+            true
+        }
+        MENU_SAVE_TRIP -> {
+            askTripName()
             true
         }
         MENU_CLEAR -> {
@@ -279,6 +284,7 @@ class MainActivity : AppCompatActivity() {
                 addMarker(pin)
                 focus(pin)
                 updateInfo()
+                downloadPhotoIfMissing(pin)
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
@@ -524,6 +530,7 @@ class MainActivity : AppCompatActivity() {
                 pendingPhoto = null
                 PinStore.add(this, pin)
                 addMarker(pin)
+                if (pin.photo != null) PhotoUploadWorker.enqueue(this)
             }
             .setNegativeButton(R.string.cancel) { _, _ ->
                 pendingPhoto?.delete()
@@ -618,6 +625,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun sharePin(pin: Pin, asGoal: Boolean) {
+        // Make sure the photo is on its way to the server before the recipient opens the link
+        if (pin.photo != null && !pin.photoUploaded) PhotoUploadWorker.enqueue(this)
         val link = ShareHelper.appLink(pin, asGoal)
         val caption = listOf(
             pin.note,
@@ -635,6 +644,92 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // ---------- server: trips & photos ----------
+
+    private fun askTripName() {
+        if (TrackStore.loadPoints(this).isEmpty()) {
+            toast(R.string.nothing_to_save)
+            return
+        }
+        val input = EditText(this).apply {
+            setText(getString(R.string.trip_default_name,
+                DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date())))
+            setSelectAllOnFocus(true)
+        }
+        val pad = (20 * resources.displayMetrics.density).toInt()
+        val box = android.widget.FrameLayout(this).apply { setPadding(pad, pad / 2, pad, 0); addView(input) }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.save_trip)
+            .setMessage(R.string.save_trip_msg)
+            .setView(box)
+            .setPositiveButton(R.string.save) { _, _ -> saveTrip(input.text.toString().trim()) }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    /** Uploads the recorded route plus the pins dropped since it started. */
+    private fun saveTrip(name: String) {
+        val segments = TrackStore.loadPoints(this)
+        val start = segments.firstOrNull()?.firstOrNull()?.time ?: return
+        val end = segments.last().last().time
+        val pins = PinStore.all(this).filter { it.time >= start }
+
+        val json = org.json.JSONObject()
+            .put("name", name)
+            .put("start", start)
+            .put("end", end)
+            .put("distanceM", distanceM)
+            .put("segments", org.json.JSONArray().apply {
+                segments.forEach { seg ->
+                    put(org.json.JSONArray().apply {
+                        seg.forEach { p -> put(org.json.JSONArray().put(p.lat).put(p.lon).put(p.time)) }
+                    })
+                }
+            })
+            .put("pins", org.json.JSONArray().apply {
+                pins.forEach { p ->
+                    put(org.json.JSONObject()
+                        .put("lat", p.lat).put("lon", p.lon).put("time", p.time)
+                        .put("note", p.note).put("type", p.type)
+                        .put("photo", p.photoId ?: org.json.JSONObject.NULL))
+                }
+            })
+
+        // Photos follow in the background; the trip page shows them once they're there
+        PhotoUploadWorker.enqueue(this)
+        toast(R.string.trip_saving)
+        Thread {
+            val result = runCatching { CityWalkApi.saveTrip(json) }
+            runOnUiThread {
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                result.onSuccess { url -> showTripSaved(name, url) }
+                    .onFailure { toast(R.string.trip_save_failed) }
+            }
+        }.start()
+    }
+
+    private fun showTripSaved(name: String, url: String) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.trip_saved)
+            .setMessage(url)
+            .setPositiveButton(R.string.share_whatsapp) { _, _ ->
+                ShareHelper.shareText(this, getString(R.string.trip_share_text, name, url))
+            }
+            .setNeutralButton(R.string.open) { _, _ ->
+                runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
+            }
+            .setNegativeButton(R.string.close, null)
+            .show()
+    }
+
+    /** Fetches the photo of a pin someone shared with us, if it isn't on the phone yet. */
+    private fun downloadPhotoIfMissing(pin: Pin) {
+        val id = pin.photoId ?: return
+        val file = PinStore.photoFile(this, pin) ?: return
+        if (file.exists() || !CityWalkApi.isValidPhotoId(id)) return
+        Thread { runCatching { CityWalkApi.downloadPhoto(id, file) } }.start()
+    }
+
     // ---------- helpers ----------
 
     private fun uriFor(file: File): Uri =
@@ -642,25 +737,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun toast(res: Int) = Toast.makeText(this, res, Toast.LENGTH_SHORT).show()
 
-    /** Decodes a downscaled bitmap and applies the camera's EXIF rotation. */
-    private fun loadBitmap(file: File, maxPx: Int): Bitmap? {
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        BitmapFactory.decodeFile(file.path, bounds)
-        var sample = 1
-        while (bounds.outWidth / (sample * 2) >= maxPx || bounds.outHeight / (sample * 2) >= maxPx) {
-            sample *= 2
-        }
-        val bmp = BitmapFactory.decodeFile(file.path, BitmapFactory.Options().apply { inSampleSize = sample })
-            ?: return null
-        val degrees = runCatching { ExifInterface(file.path).rotationDegrees }.getOrDefault(0)
-        if (degrees == 0) return bmp
-        val m = Matrix().apply { postRotate(degrees.toFloat()) }
-        return Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true)
-    }
+    private fun loadBitmap(file: File, maxPx: Int) = PhotoUtil.loadBitmap(file, maxPx)
 
     companion object {
         private const val MENU_CENTER = 1
         private const val MENU_CLEAR = 2
         private const val MENU_LINKS = 3
+        private const val MENU_SAVE_TRIP = 4
     }
 }

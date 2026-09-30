@@ -42,5 +42,14 @@
     <string name="caption_pin">📍 Open in City Walk: %1$s</string>
     <string name="caption_goal">🎯 A goal for you! Walk here and see what happens: %1$s</string>
     <string name="caption_maps">🗺️ %1$s</string>
+    <string name="save_trip">Save trip to server</string>
+    <string name="save_trip_msg">Uploads the recorded route and the pins you dropped along the way. You get a link to view it in a browser.</string>
+    <string name="trip_default_name">Walk %1$s</string>
+    <string name="nothing_to_save">No route recorded yet. Start tracking first.</string>
+    <string name="trip_saving">Saving trip…</string>
+    <string name="trip_saved">✅ Trip saved</string>
+    <string name="trip_save_failed">Couldn\'t save the trip. Check your internet and try again.</string>
+    <string name="trip_share_text">🚶 %1$s: %2$s</string>
+    <string name="open">Open</string>
 </resources>
 

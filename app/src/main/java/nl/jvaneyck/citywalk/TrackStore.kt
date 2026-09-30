@@ -21,12 +21,19 @@ object TrackStore {
         file(ctx).appendText("-\n")
     }
 
+    data class Point(val time: Long, val lat: Double, val lon: Double)
+
     @Synchronized
-    fun load(ctx: Context): MutableList<MutableList<GeoPoint>> {
-        val segments = mutableListOf<MutableList<GeoPoint>>()
+    fun load(ctx: Context): MutableList<MutableList<GeoPoint>> =
+        loadPoints(ctx).mapTo(mutableListOf()) { seg -> seg.mapTo(mutableListOf()) { GeoPoint(it.lat, it.lon) } }
+
+    /** Segments with timestamps, e.g. for saving the trip to the server. */
+    @Synchronized
+    fun loadPoints(ctx: Context): List<List<Point>> {
+        val segments = mutableListOf<List<Point>>()
         val f = file(ctx)
         if (!f.exists()) return segments
-        var current = mutableListOf<GeoPoint>()
+        var current = mutableListOf<Point>()
         f.forEachLine { line ->
             if (line == "-") {
                 if (current.isNotEmpty()) segments += current
@@ -34,9 +41,10 @@ object TrackStore {
             } else {
                 val parts = line.split(',')
                 if (parts.size == 3) {
+                    val time = parts[0].toLongOrNull()
                     val lat = parts[1].toDoubleOrNull()
                     val lon = parts[2].toDoubleOrNull()
-                    if (lat != null && lon != null) current += GeoPoint(lat, lon)
+                    if (time != null && lat != null && lon != null) current += Point(time, lat, lon)
                 }
             }
         }
