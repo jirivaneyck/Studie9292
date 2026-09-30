@@ -33,7 +33,9 @@ Or with USB debugging on: `adb install -r CityWalk.apk`
   - *As pin*: the other person taps the link and City Walk opens on that spot (blue pin).
   - *As goal*: shows up as an orange flag for them. When they come within 50 m they get a celebration (banner + vibration, or a notification if the app is in the background) and the flag turns green.
 - **Share location**: sends "I'm here: <Google Maps link>" via WhatsApp.
-- Menu: *Center on me*, *Clear route* (pins are kept), *Open City Walk links directly*.
+- **Photos** are uploaded to the server in the background whenever there's internet (resized to 1600 px, location data stripped). Shared pin/goal links carry the photo, so the other person sees it too.
+- **Save trip to server** (menu): uploads the recorded route plus the pins dropped since it started, and gives you a link to a trip page with the map, route, pins and photos. The route stays in the app until you *Clear route*.
+- Menu: *Center on me*, *Save trip to server*, *Clear route* (pins are kept), *Open City Walk links directly*.
 
 Tip: if tracking stops while the screen is off, set battery usage for City Walk to "Unrestricted" in Android settings.
 
@@ -46,3 +48,25 @@ City Walk; without the app it shows the spot on Google Maps.
 - The host is set in `app/build.gradle.kts` (`linkHost`). It is a DuckDNS name for the home server (WhatsApp only makes part of a bare-IP link clickable), so it keeps working when the home IP changes as long as DuckDNS is kept up to date.
 - HTTPS and link verification come from Caddy on the server ([server/Caddyfile](server/Caddyfile)): it gets a Let's Encrypt certificate and serves `/.well-known/assetlinks.json`, so Android opens links straight in the app. The fingerprint in that file must match the key the APK is signed with (`gradlew signingReport`); builds signed with another key still work via the web page.
 - If links still open the browser: menu → *Open City Walk links directly* and check `9292games.duckdns.org` is enabled.
+
+## Server API (photos & trips)
+
+[server/api/citywalk-api.mjs](server/api/citywalk-api.mjs) is a small dependency-free Node service (pm2 name
+`citywalk-api`, port 4323) that Caddy serves under `/citywalk/…`:
+
+| Path | |
+|---|---|
+| `PUT /citywalk/api/photos/<id>` | upload a JPEG (token) |
+| `GET /citywalk/photo/<id>.jpg` | photo |
+| `POST /citywalk/api/trips` | save a trip (token), returns its page URL |
+| `GET /citywalk/trip/<id>` | trip page |
+
+Data lives in `~/citywalk-data` on the server. Uploads need a shared token:
+
+1. Put `citywalk.token=<long random string>` in `local.properties` (never committed). The app reads it at build time;
+   without it the app still works, only the upload features are off.
+2. Deploy/update the service with `./server/deploy-api.sh` (Git Bash, home network). It copies the code,
+   writes the token to `~/citywalk-api/.env` on the server and (re)starts it with pm2.
+
+The token is built into the APK, so anyone who has the APK could in theory dig it out and upload files. That's
+fine for a private app; change the token (and redeploy + rebuild) if the APK ends up somewhere public.
