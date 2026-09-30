@@ -33,8 +33,8 @@
                 <data android:scheme="citywalk" android:host="pin" />
             </intent-filter>
 
-            <!-- The shared web link itself; opens directly once enabled under "Open by default" -->
-            <intent-filter android:autoVerify="false">
+            <!-- The shared web link itself; verified via /.well-known/assetlinks.json (see server/Caddyfile) -->
+            <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />

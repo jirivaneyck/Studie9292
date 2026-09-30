@@ -11,8 +11,8 @@ android {
         applicationId = "nl.jvaneyck.citywalk"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.3"
+        versionCode = 5
+        versionName = "1.4"
 
         // Web page that turns a shared link into "open City Walk" (hosted with the lingo site)
         // DuckDNS name for the home server (WhatsApp only links a bare IP partially)
@@ -20,7 +20,7 @@ android {
         val linkPath = "/citywalk"
         manifestPlaceholders["linkHost"] = linkHost
         manifestPlaceholders["linkPath"] = linkPath
-        buildConfigField("String", "LINK_BASE", "\"http://$linkHost$linkPath\"")
+        buildConfigField("String", "LINK_BASE", "\"https://$linkHost$linkPath\"")
     }
 
     buildFeatures {

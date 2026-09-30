@@ -34,9 +34,10 @@ Tip: if tracking stops while the screen is off, set battery usage for City Walk 
 
 ## Share links
 
-Links look like `http://9292games.duckdns.org/citywalk?lat=..&lon=..&type=goal&note=..` and are served by the page
+Links look like `https://9292games.duckdns.org/citywalk?lat=..&lon=..&type=goal&note=..` and are served by the page
 `src/pages/citywalk.astro` in the **lingo** project (same server). On Android the page hands the link to
 City Walk; without the app it shows the spot on Google Maps.
 
 - The host is set in `app/build.gradle.kts` (`linkHost`). It is a DuckDNS name for the home server (WhatsApp only makes part of a bare-IP link clickable), so it keeps working when the home IP changes as long as DuckDNS is kept up to date.
-- To skip the browser page entirely: menu → *Open City Walk links directly* → *Add link* → tick `9292games.duckdns.org`.
+- HTTPS and link verification come from Caddy on the server ([server/Caddyfile](server/Caddyfile)): it gets a Let's Encrypt certificate and serves `/.well-known/assetlinks.json`, so Android opens links straight in the app. The fingerprint in that file must match the key the APK is signed with (`gradlew signingReport`); builds signed with another key still work via the web page.
+- If links still open the browser: menu → *Open City Walk links directly* and check `9292games.duckdns.org` is enabled.
