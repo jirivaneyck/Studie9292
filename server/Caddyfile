@@ -8,6 +8,16 @@
 		header Content-Type application/json
 		respond `[{"relation":["delegate_permission/common.handle_all_urls"],"target":{"namespace":"android_app","package_name":"nl.jvaneyck.citywalk","sha256_cert_fingerprints":["37:BD:B5:BC:95:54:B1:FA:60:95:1A:FC:75:24:BD:9A:BC:A1:39:3B:15:DB:CD:09:BC:07:AA:A9:41:15:7B:6C"]}}]` 200
 	}
+	# Downloadable APKs, uploaded by the Gradle build (publishApk task) to /srv/apps
+	redir /apps /apps/
+	handle_path /apps/* {
+		root * /srv/apps
+		@apk path *.apk
+		header @apk Content-Type application/vnd.android.package-archive
+		header @apk Cache-Control no-cache
+		file_server browse
+	}
+
 	reverse_proxy localhost:4321
 }
 

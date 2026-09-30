@@ -12,9 +12,14 @@ gradlew.bat assembleDebug
 
 APK: `app\build\outputs\apk\debug\app-debug.apk`
 
+Every `assembleDebug` also copies it to `CityWalk.apk` in the project root and uploads it to the home server
+(`publishApk` task; needs SSH key access to `deploy@192.168.2.41`, so only on the home network).
+Download it on a phone from **https://9292games.duckdns.org/apps/CityWalk.apk**. Away from home the
+upload is skipped with a warning; skip it on purpose with `gradlew.bat assembleDebug -PnoPublish`.
+
 ## Install on your phone
 
-1. Copy the APK to the phone (USB, Google Drive, or mail it to yourself).
+1. On the phone, open https://9292games.duckdns.org/apps/CityWalk.apk (or copy the APK over USB).
 2. Open it; allow "Install unknown apps" for the app you opened it from.
 3. On first start, allow location (choose "While using the app" + "Precise") and notifications.
 
