@@ -1,0 +1,17 @@
+# /etc/caddy/Caddyfile on the home server (webhost)
+# HTTPS with an automatic Let's Encrypt certificate; everything goes to the lingo app on :4321.
+
+9292games.duckdns.org {
+	# Lets Android open City Walk links straight in the app (App Links verification).
+	# Fingerprint = SHA-256 of the key the APK is signed with.
+	handle /.well-known/assetlinks.json {
+		header Content-Type application/json
+		respond `[{"relation":["delegate_permission/common.handle_all_urls"],"target":{"namespace":"android_app","package_name":"nl.jvaneyck.citywalk","sha256_cert_fingerprints":["37:BD:B5:BC:95:54:B1:FA:60:95:1A:FC:75:24:BD:9A:BC:A1:39:3B:15:DB:CD:09:BC:07:AA:A9:41:15:7B:6C"]}}]` 200
+	}
+	reverse_proxy localhost:4321
+}
+
+# Plain HTTP by IP / on the LAN keeps working as before
+http:// {
+	reverse_proxy localhost:4321
+}
