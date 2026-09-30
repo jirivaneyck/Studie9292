@@ -1,0 +1,9 @@
+<resources>
+    <style name="Theme.CityWalk" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+        <item name="colorPrimary">#1E6FD9</item>
+        <item name="colorPrimaryVariant">#1553A6</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorSecondary">#E53935</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+    </style>
+</resources>

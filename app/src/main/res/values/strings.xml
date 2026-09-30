@@ -1,0 +1,46 @@
+<resources>
+    <string name="app_name">City Walk</string>
+    <string name="start_tracking">Start tracking</string>
+    <string name="stop_tracking">Stop tracking</string>
+    <string name="add_pin">Add pin</string>
+    <string name="share_location">Share location</string>
+    <string name="camera">Camera</string>
+    <string name="gallery">Gallery</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="close">Close</string>
+    <string name="delete">Delete</string>
+    <string name="share_whatsapp">Share via WhatsApp</string>
+    <string name="note_hint">Note (optional)</string>
+    <string name="clear_route">Clear route</string>
+    <string name="center_on_me">Center on me</string>
+    <string name="tracking_channel">Walk tracking</string>
+    <string name="tracking_notification">Tracking your walk…</string>
+    <string name="no_location">No GPS fix yet, try again in a moment</string>
+    <string name="need_location_permission">Location permission is needed</string>
+    <string name="clear_route_confirm">Delete the recorded route? Pins are kept.</string>
+    <string name="delete_pin_confirm">Delete this pin?</string>
+    <string name="im_here">I\'m here: %1$s</string>
+    <string name="route_distance">Route: %1$.2f km</string>
+    <string name="goals_channel">Goals</string>
+    <string name="goal_reached_title">🎉 Goal reached!</string>
+    <string name="goal_reached_generic">You made it to your goal</string>
+    <string name="goal_distance">🎯 Next goal: %1$s</string>
+    <string name="share_as_pin">As pin (opens in City Walk)</string>
+    <string name="share_as_goal">As goal for the other person</string>
+    <string name="share_how">Share this spot</string>
+    <string name="pin_title">📍 Pin</string>
+    <string name="goal_title">🎯 Goal</string>
+    <string name="goal_title_reached">✅ Goal reached</string>
+    <string name="received_pin_title">📍 Received pin</string>
+    <string name="received_goal_title">🎯 You got a goal!</string>
+    <string name="received_goal_msg">Walk there. You\'ll get a surprise when you\'re within 50 m.</string>
+    <string name="add_to_map">Add to map</string>
+    <string name="invalid_link">This link doesn\'t contain a valid location</string>
+    <string name="open_links_setting">Open City Walk links directly</string>
+    <string name="open_links_help">Tap \"Add link\" and tick %1$s, so shared links skip the browser.</string>
+    <string name="caption_pin">📍 Open in City Walk: %1$s</string>
+    <string name="caption_goal">🎯 A goal for you! Walk here and see what happens: %1$s</string>
+    <string name="caption_maps">🗺️ %1$s</string>
+</resources>
+
